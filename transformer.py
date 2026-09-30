@@ -6,6 +6,8 @@ import torch.nn.functional as F
 PAD, BOS, EOS = 0, 1, 2
 DIGIT_OFFSET = 3
 VOCAB = DIGIT_OFFSET + 10
+MAX_NUM = 100
+VOCAB = DIGIT_OFFSET + MAX_NUM
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=512):
@@ -137,13 +139,13 @@ def make_masks(src, tgt):
     return src_mask, tgt_mask
 
 
-def make_batch(batch_size, device, min_len=3, max_len=8):
+def make_batch(batch_size, device, min_len=3, max_len=10):
     src = torch.full((batch_size, max_len), PAD)
     tgt_in = torch.full((batch_size, max_len + 1), PAD)
     tgt_out = torch.full((batch_size, max_len + 1), PAD)
     for b in range(batch_size):
         n = torch.randint(min_len, max_len + 1, (1,)).item()
-        digits = torch.randint(0, 10, (n,))
+        digits = torch.randint(0, MAX_NUM, (n,))
         s = digits.sort().values
         src[b, :n] = digits + DIGIT_OFFSET
         tgt_in[b, 0] = BOS
@@ -154,7 +156,7 @@ def make_batch(batch_size, device, min_len=3, max_len=8):
 
 
 @torch.no_grad()
-def greedy_decode(model, src, max_len=10):
+def greedy_decode(model, src, max_len=12):
     src_mask = (src != PAD)[:, None, None, :]
     memory = model.encode(src, src_mask)
     ys = torch.full((src.size(0), 1), BOS, device=src.device)
@@ -179,9 +181,9 @@ def to_digits(seq):
 if __name__ == "__main__":
     torch.manual_seed(42)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    d_model, warmup, steps = 64, 200, 1500
+    d_model, warmup, steps = 128, 400, 6000
 
-    model = Transformer(VOCAB, d_model=d_model, n_heads=4, d_ff=128, n_layers=2, dropout=0.0).to(device)
+    model = Transformer(VOCAB, d_model=d_model, n_heads=4, d_ff=256, n_layers=2, dropout=0.0).to(device)
     print(f"device={device}  parameters={sum(p.numel() for p in model.parameters()):,}")
 
     opt = torch.optim.Adam(model.parameters(), lr=1.0, betas=(0.9, 0.98), eps=1e-9)
@@ -209,4 +211,4 @@ if __name__ == "__main__":
     for i in range(5):
         print(f"  {to_digits(src[i])}  ->  {to_digits(pred[i])}")
 
-    torch.save(model.state_dict(), "sorter_transformer.pt")
+    torch.save(model.state_dict(), "sorter_0_99.pt")
