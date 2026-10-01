@@ -211,4 +211,4 @@ if __name__ == "__main__":
     for i in range(5):
         print(f"  {to_digits(src[i])}  ->  {to_digits(pred[i])}")
 
-    torch.save(model.state_dict(), "sorter_0_99.pt")
+    torch.save(model.state_dict(), "sorter_transformer.pt")
